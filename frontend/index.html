@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Health Guardian</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
+    <!-- FontAwesome for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <div class="background-animation"></div>
+    
+    <div class="app-container">
+        <!-- Sidebar -->
+        <nav class="sidebar glass-panel">
+            <div class="logo">
+                <i class="fa-solid fa-heart-pulse"></i>
+                <h2>HealthGuard</h2>
+            </div>
+            <ul class="nav-links">
+                <li id="navDashboard" class="active"><i class="fa-solid fa-house"></i> Dashboard</li>
+                <li id="navSymptomCheck"><i class="fa-solid fa-stethoscope"></i> Symptom Check</li>
+                <li id="navMedScanner"><i class="fa-solid fa-pills"></i> Med Scanner</li>
+                <li id="navSettings"><i class="fa-solid fa-gear"></i> Settings</li>
+
+                <li id="logoutBtn" style="color: var(--danger); margin-top: auto;"><i class="fa-solid fa-right-from-bracket"></i> Logout</li>
+            </ul>
+            <div class="user-profile">
+                <img id="userAvatarDisplay" src="https://i.pravatar.cc/150?img=32" alt="User Profile">
+                <div>
+                    <h4 id="userNameDisplay">Jane Doe</h4>
+                    <span class="status-badge normal">Healthy</span>
+                </div>
+            </div>
+        </nav>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <header>
+                <h1 id="pageTitle">Patient Dashboard</h1>
+                <div class="header-actions">
+                    <button id="simulateEmergencyBtn" class="btn btn-danger"><i class="fa-solid fa-triangle-exclamation"></i> Simulate Emergency</button>
+                </div>
+            </header>
+
+            <div id="dashboardView" class="widgets-grid">
+                <!-- Vitals Widget -->
+                <div class="widget glass-panel">
+                    <h3><i class="fa-solid fa-wave-square"></i> Real-time Vitals</h3>
+                    <div class="vitals-display">
+                        <div class="vital-item">
+                            <span class="vital-label">Heart Rate</span>
+                            <span class="vital-value" id="heartRate">72 <small>bpm</small></span>
+                        </div>
+                        <div class="vital-item">
+                            <span class="vital-label">Blood Oxygen</span>
+                            <span class="vital-value" id="oxLevel">98 <small>%</small></span>
+                        </div>
+                        <div class="vital-item">
+                            <span class="vital-label">Body Temp</span>
+                            <span class="vital-value" id="temperature">98.6 <small>°F</small></span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Chatbot Widget -->
+                <div class="widget glass-panel chatbot-widget">
+                    <h3><i class="fa-solid fa-robot"></i> AI Symptom Checker</h3>
+                    <div class="chat-window" id="chatWindow">
+                        <div class="message ai">Hello! I am your AI Health Guardian. Please describe any symptoms you are experiencing.</div>
+                    </div>
+                    <div class="chat-input-area">
+                        <button class="icon-btn" id="voiceBtn" title="Voice Input"><i class="fa-solid fa-microphone"></i></button>
+                        <input type="text" id="chatInput" placeholder="Type your symptoms...">
+                        <button class="icon-btn" id="sendBtn"><i class="fa-solid fa-paper-plane"></i></button>
+                    </div>
+                </div>
+            </div>
+            
+            <div id="settingsView" class="hidden-view">
+                <div class="widget glass-panel settings-panel">
+                    <div class="settings-header">
+                        <img id="settingsAvatarPreview" src="https://i.pravatar.cc/150?img=32" alt="Profile">
+                        <div>
+                            <h3>Edit Profile</h3>
+                            <p style="color: var(--text-secondary); font-size: 14px;">Update your personal details and emergency contacts.</p>
+                        </div>
+                    </div>
+                    
+                    <form id="settingsForm" class="auth-form" style="margin-top: 10px;">
+                        <div class="form-group">
+                            <label>Full Name</label>
+                            <div class="input-with-icon">
+                                <i class="fa-regular fa-user"></i>
+                                <input type="text" id="settingsName" required>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label>Profile Picture</label>
+                            <div class="input-with-icon">
+                                <i class="fa-regular fa-image"></i>
+                                <input type="file" id="settingsAvatarFile" accept="image/*" style="padding-top: 9px;">
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label>Emergency Contact Phone (for SMS)</label>
+                            <div class="input-with-icon">
+                                <i class="fa-solid fa-phone"></i>
+                                <input type="tel" id="settingsPhone" placeholder="+1234567890">
+                            </div>
+                        </div>
+
+                        <button type="submit" class="btn btn-primary" style="margin-top: 15px; justify-content: center;">Save Changes</button>
+                        <div id="settingsSuccess" style="color: var(--success); text-align: center; margin-top: 10px;" class="hidden-view">Settings saved successfully!</div>
+                    </form>
+                </div>
+            </div>
+
+            <div id="medScannerView" class="hidden-view">
+                <div class="widget glass-panel" style="height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center;">
+                    <h3><i class="fa-solid fa-pills"></i> AI Medicine Scanner</h3>
+                    <p style="color: var(--text-secondary); margin-bottom: 20px; text-align: center;">Upload an image of your medication to instantly verify its details, dosage, and side effects.</p>
+                    
+                    <div id="scannerBox" style="width: 100%; max-width: 400px; height: 300px; border: 2px dashed var(--primary); border-radius: 20px; display: flex; align-items: center; justify-content: center; flex-direction: column; cursor: pointer; transition: all 0.3s; position: relative; overflow: hidden; background: rgba(0,0,0,0.2);">
+                        <input type="file" id="medImageInput" accept="image/*" style="opacity: 0; position: absolute; width: 100%; height: 100%; cursor: pointer; z-index: 10;">
+                        <i class="fa-solid fa-camera" style="font-size: 40px; color: var(--primary); margin-bottom: 15px;"></i>
+                        <span id="scannerText">Click to Upload Medicine Photo</span>
+                        <img id="medPreview" style="position: absolute; width: 100%; height: 100%; object-fit: cover; display: none;">
+                        <div id="scanningOverlay" style="position: absolute; width: 100%; height: 100%; background: rgba(74, 144, 226, 0.4); display: none; align-items: center; justify-content: center; backdrop-filter: blur(4px); z-index: 5;">
+                            <i class="fa-solid fa-circle-notch fa-spin" style="font-size: 40px; color: white;"></i>
+                        </div>
+                    </div>
+
+                    <div id="medResult" class="hidden-view" style="margin-top: 30px; background: rgba(16, 185, 129, 0.15); border: 1px solid rgba(16, 185, 129, 0.3); padding: 20px; border-radius: 12px; max-width: 500px; width: 100%;">
+                        <h4 style="color: var(--success); margin-bottom: 10px; font-size: 18px;"><i class="fa-solid fa-check-circle"></i> Medication Identified</h4>
+                        <p style="margin-bottom: 5px;"><strong>Name:</strong> <span id="medNameLabel" style="color: white; font-weight: 600;">Paracetamol 500mg</span></p>
+                        <p style="margin-bottom: 5px; color: #E2E8F0;"><strong>Usage:</strong> Pain relief, fever reduction</p>
+                        <p style="color: #fca5a5;"><strong>Warning:</strong> Do not exceed 4000mg per day. Potential liver risk if mixed with alcohol.</p>
+                        <button class="btn btn-primary" style="margin-top: 15px; width: 100%; justify-content: center;" onclick="document.getElementById('medImageInput').value=''; document.getElementById('medResult').classList.add('hidden-view'); document.getElementById('medPreview').style.display='none';">Scan Another</button>
+                    </div>
+                </div>
+            </div>
+
+            <div id="alertBanner" class="alert-banner hidden">
+                <i class="fa-solid fa-bell"></i>
+                <span id="alertText">Alert Message</span>
+            </div>
+        </main>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>

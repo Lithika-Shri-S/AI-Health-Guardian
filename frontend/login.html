@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - AI Health Guardian</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body class="auth-page">
+    <div class="background-animation"></div>
+    
+    <div class="auth-container glass-panel">
+        <div class="logo justify-center mb-4">
+            <i class="fa-solid fa-heart-pulse"></i>
+            <h2>HealthGuard</h2>
+        </div>
+        
+        <h3 class="auth-title">Welcome Back</h3>
+        <p class="auth-subtitle">Login to monitor your health</p>
+
+        <form id="loginForm" class="auth-form">
+            <div class="form-group">
+                <label>Email Address</label>
+                <div class="input-with-icon">
+                    <i class="fa-regular fa-envelope"></i>
+                    <input type="email" id="email" placeholder="Enter your email" required>
+                </div>
+            </div>
+            
+            <div class="form-group">
+                <label>Password</label>
+                <div class="input-with-icon">
+                    <i class="fa-solid fa-lock"></i>
+                    <input type="password" id="password" placeholder="Enter your password" required>
+                </div>
+            </div>
+
+            <div class="form-options">
+                <label class="remember-me">
+                    <input type="checkbox" id="remember"> Remember me
+                </label>
+                <a href="#" class="forgot-password">Forgot Password?</a>
+            </div>
+
+            <button type="submit" class="btn btn-primary w-100">Login <i class="fa-solid fa-arrow-right"></i></button>
+            <div id="authError" class="auth-error hidden">Invalid email or password.</div>
+        </form>
+
+        <p class="auth-switch">Don't have an account? <a href="signup.html">Sign up here</a></p>
+    </div>
+
+    <script src="auth.js"></script>
+</body>
+</html>
