@@ -1,0 +1,610 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI Health Guardian</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+  :root {
+    --bg: #0d0f12;
+    --surface: #13161b;
+    --surface2: #1a1e25;
+    --border: rgba(255,255,255,0.07);
+    --border2: rgba(255,255,255,0.12);
+    --text: #e8eaf0;
+    --text2: #7a8299;
+    --text3: #4a5168;
+    --green: #00d4a0;
+    --green-dim: rgba(0,212,160,0.12);
+    --amber: #f0a500;
+    --amber-dim: rgba(240,165,0,0.12);
+    --red: #ff4f6a;
+    --red-dim: rgba(255,79,106,0.12);
+    --blue: #4f9eff;
+    --blue-dim: rgba(79,158,255,0.12);
+    --radius: 12px;
+    --radius-sm: 8px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; display: flex; overflow-x: hidden; }
+
+  .sidebar {
+    width: 230px; flex-shrink: 0; background: var(--surface);
+    border-right: 1px solid var(--border); display: flex; flex-direction: column;
+    position: fixed; height: 100vh; top: 0; left: 0; z-index: 100; overflow-y: auto;
+  }
+  .logo-area { padding: 1.25rem 1rem; border-bottom: 1px solid var(--border); }
+  .logo-mark { display: flex; align-items: center; gap: 10px; }
+  .logo-icon { width: 34px; height: 34px; background: var(--green); border-radius: 9px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .logo-icon svg { width: 18px; height: 18px; fill: #0d0f12; }
+  .logo-title { font-size: 13px; font-weight: 600; color: var(--text); }
+  .logo-sub { font-size: 10px; color: var(--text3); font-family: 'DM Mono', monospace; }
+  .ai-status { display: inline-flex; align-items: center; gap: 6px; margin-top: 10px; background: var(--green-dim); border: 1px solid rgba(0,212,160,0.2); border-radius: 20px; padding: 4px 10px; }
+  .pulse { width: 6px; height: 6px; background: var(--green); border-radius: 50%; animation: pulse 2s ease-in-out infinite; flex-shrink: 0; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
+  .ai-status span { font-size: 11px; color: var(--green); font-family: 'DM Mono', monospace; }
+
+  nav { padding: 0.75rem; flex: 1; }
+  .nav-group { margin-bottom: 1.25rem; }
+  .nav-label { font-size: 10px; color: var(--text3); letter-spacing: .1em; text-transform: uppercase; padding: 0 0.4rem; margin-bottom: 5px; display: block; }
+  .nav-btn { display: flex; align-items: center; gap: 9px; width: 100%; padding: 8px 10px; border-radius: var(--radius-sm); border: 1px solid transparent; background: none; color: var(--text2); font-size: 13px; font-family: 'DM Sans', sans-serif; cursor: pointer; transition: all .15s; text-align: left; }
+  .nav-btn:hover { background: var(--surface2); color: var(--text); }
+  .nav-btn.active { background: var(--green-dim); color: var(--green); border-color: rgba(0,212,160,0.2); }
+  .nav-btn svg { width: 15px; height: 15px; flex-shrink: 0; }
+  .nav-badge { margin-left: auto; background: var(--red); color: white; font-size: 10px; padding: 1px 6px; border-radius: 10px; font-weight: 600; }
+  .sidebar-foot { padding: 1rem; border-top: 1px solid var(--border); }
+  .patient-card { display: flex; align-items: center; gap: 9px; }
+  .patient-avatar { width: 30px; height: 30px; border-radius: 50%; background: linear-gradient(135deg,#4f9eff,#00d4a0); display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 600; color: #0d0f12; flex-shrink: 0; }
+  .patient-name { font-size: 12px; font-weight: 500; }
+  .patient-id { font-size: 10px; color: var(--text3); font-family: 'DM Mono', monospace; }
+
+  .main { margin-left: 230px; flex: 1; padding: 1.75rem; min-height: 100vh; max-width: calc(100vw - 230px); }
+  .page { display: none; }
+  .page.active { display: block; animation: fadeIn .2s ease; }
+  @keyframes fadeIn { from{opacity:0;transform:translateY(4px)} to{opacity:1;transform:none} }
+  .page-head { margin-bottom: 1.5rem; }
+  .page-head h1 { font-size: 20px; font-weight: 600; color: var(--text); letter-spacing: -.3px; }
+  .page-head p { font-size: 12px; color: var(--text2); margin-top: 3px; }
+
+  .metrics-row { display: grid; grid-template-columns: repeat(4,1fr); gap: 10px; margin-bottom: 1rem; }
+  .metric-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 1rem; position: relative; overflow: hidden; }
+  .metric-card::before { content:''; position:absolute; top:0; left:0; right:0; height:2px; border-radius:2px 2px 0 0; }
+  .metric-card.ok::before { background: var(--green); }
+  .metric-card.warn::before { background: var(--amber); }
+  .metric-card.danger::before { background: var(--red); }
+  .metric-label { font-size: 10px; color: var(--text3); text-transform: uppercase; letter-spacing: .06em; margin-bottom: 7px; }
+  .metric-value { font-size: 22px; font-weight: 600; color: var(--text); font-family: 'DM Mono', monospace; letter-spacing: -1px; }
+  .metric-unit { font-size: 12px; font-weight: 400; color: var(--text3); }
+  .metric-status { font-size: 11px; margin-top: 5px; }
+  .metric-status.ok { color: var(--green); }
+  .metric-status.warn { color: var(--amber); }
+  .metric-status.danger { color: var(--red); }
+
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 1.1rem; margin-bottom: 1rem; }
+  .card-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.9rem; }
+  .card-title { font-size: 13px; font-weight: 500; color: var(--text); }
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+  .pill { font-size: 10px; padding: 2px 8px; border-radius: 20px; font-family: 'DM Mono', monospace; }
+  .pill-green { background: var(--green-dim); color: var(--green); border: 1px solid rgba(0,212,160,0.2); }
+  .pill-blue { background: var(--blue-dim); color: var(--blue); border: 1px solid rgba(79,158,255,0.2); }
+  .pill-amber { background: var(--amber-dim); color: var(--amber); border: 1px solid rgba(240,165,0,0.2); }
+  .pill-red { background: var(--red-dim); color: var(--red); border: 1px solid rgba(255,79,106,0.2); }
+
+  /* Chart containers — FIXED HEIGHT, no growing */
+  .chart-box { position: relative; width: 100%; height: 100px; }
+  .chart-box canvas { position: absolute; top: 0; left: 0; width: 100% !important; height: 100% !important; }
+
+  .alert-row { display: flex; align-items: flex-start; gap: 11px; padding: 12px; border-radius: var(--radius-sm); border: 1px solid var(--border); margin-bottom: 8px; }
+  .alert-dot { width: 7px; height: 7px; border-radius: 50%; margin-top: 4px; flex-shrink: 0; }
+  .alert-title { font-size: 13px; font-weight: 500; color: var(--text); }
+  .alert-desc { font-size: 12px; color: var(--text2); margin-top: 3px; line-height: 1.5; }
+
+  .symptom-grid { display: flex; flex-wrap: wrap; gap: 7px; margin-bottom: 1.1rem; }
+  .sym-tag { padding: 6px 13px; border-radius: 20px; border: 1px solid var(--border2); font-size: 12px; color: var(--text2); cursor: pointer; background: var(--surface2); transition: all .15s; user-select: none; }
+  .sym-tag:hover { border-color: var(--green); color: var(--text); }
+  .sym-tag.on { background: var(--green-dim); color: var(--green); border-color: rgba(0,212,160,0.4); }
+  .sev-bar { height: 6px; background: var(--surface2); border-radius: 3px; overflow: hidden; margin-top: 10px; }
+  .sev-fill { height: 100%; border-radius: 3px; transition: width .5s ease; width: 0; }
+  .result-box { background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 1rem; margin-top: 1rem; font-size: 13px; line-height: 1.7; color: var(--text2); display: none; }
+
+  .drop-zone { border: 1.5px dashed var(--border2); border-radius: var(--radius); padding: 2.5rem 2rem; text-align: center; cursor: pointer; transition: all .2s; }
+  .drop-zone:hover { border-color: var(--green); background: var(--green-dim); }
+  .drop-zone input { display: none; }
+  .drop-icon { width: 44px; height: 44px; background: var(--surface2); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 0.9rem; }
+  .drop-icon svg { width: 20px; height: 20px; stroke: var(--text2); }
+  .drop-title { font-size: 14px; font-weight: 500; color: var(--text); }
+  .drop-sub { font-size: 12px; color: var(--text3); margin-top: 4px; }
+  .med-preview { max-width: 100%; max-height: 160px; object-fit: contain; border-radius: var(--radius-sm); margin-top: 1rem; display: none; }
+  .med-result { display: none; margin-top: 1.25rem; }
+  .med-name-row { display: flex; align-items: center; gap: 10px; margin-bottom: 1rem; }
+  .med-name { font-size: 17px; font-weight: 600; color: var(--text); }
+  .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .info-tile { background: var(--surface2); border-radius: var(--radius-sm); padding: 10px 12px; }
+  .info-tile-label { font-size: 10px; color: var(--text3); text-transform: uppercase; letter-spacing: .06em; margin-bottom: 4px; }
+  .info-tile-val { font-size: 13px; color: var(--text); line-height: 1.5; }
+  .disclaimer { margin-top: 1rem; padding: 10px 14px; background: var(--amber-dim); border: 1px solid rgba(240,165,0,0.15); border-radius: var(--radius-sm); font-size: 12px; color: var(--amber); line-height: 1.5; }
+
+  .chat-wrap { display: flex; flex-direction: column; }
+  .chat-msgs { height: 380px; overflow-y: auto; padding: 0.25rem 0; display: flex; flex-direction: column; gap: 10px; }
+  .chat-msgs::-webkit-scrollbar { width: 3px; }
+  .chat-msgs::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
+  .bubble { max-width: 82%; padding: 10px 14px; border-radius: 14px; font-size: 13px; line-height: 1.6; }
+  .bubble.bot { background: var(--surface2); color: var(--text); border-radius: 4px 14px 14px 14px; align-self: flex-start; }
+  .bubble.user { background: var(--green); color: #0d0f12; border-radius: 14px 4px 14px 14px; align-self: flex-end; font-weight: 500; }
+  .bubble.loading { color: var(--text3); font-style: italic; }
+  .chat-bar { display: flex; gap: 8px; margin-top: 1rem; padding-top: 1rem; border-top: 1px solid var(--border); }
+  .chat-bar input { flex: 1; background: var(--surface2); border: 1px solid var(--border2); border-radius: var(--radius-sm); padding: 10px 14px; color: var(--text); font-size: 13px; font-family: 'DM Sans', sans-serif; outline: none; transition: border .15s; min-width: 0; }
+  .chat-bar input:focus { border-color: var(--green); }
+  .chat-bar input::placeholder { color: var(--text3); }
+
+  .btn { padding: 9px 16px; border-radius: var(--radius-sm); border: 1px solid var(--border2); background: var(--surface2); color: var(--text); font-size: 13px; font-family: 'DM Sans', sans-serif; cursor: pointer; transition: all .15s; font-weight: 500; white-space: nowrap; }
+  .btn:hover { border-color: var(--green); color: var(--green); }
+  .btn-green { background: var(--green); color: #0d0f12; border-color: var(--green); }
+  .btn-green:hover { opacity: .9; color: #0d0f12; }
+  .btn:disabled { opacity: .4; cursor: not-allowed; }
+
+  .spin { display: inline-block; width: 13px; height: 13px; border: 2px solid var(--border2); border-top-color: var(--green); border-radius: 50%; animation: rotate .7s linear infinite; vertical-align: middle; margin-right: 5px; }
+  @keyframes rotate { to { transform: rotate(360deg); } }
+
+  .error-box { background: var(--red-dim); border: 1px solid rgba(255,79,106,0.2); border-radius: var(--radius-sm); padding: 10px 14px; font-size: 12px; color: var(--red); margin-top: 10px; display: none; }
+
+  @media (max-width: 860px) {
+    .metrics-row { grid-template-columns: repeat(2,1fr); }
+    .grid2 { grid-template-columns: 1fr; }
+    .info-grid { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<aside class="sidebar">
+  <div class="logo-area">
+    <div class="logo-mark">
+      <div class="logo-icon">
+        <svg viewBox="0 0 24 24"><path d="M12 2a5 5 0 0 1 5 5 5 5 0 0 1-5 5 5 5 0 0 1-5-5 5 5 0 0 1 5-5m0 12c5.33 0 8 2.67 8 4v2H4v-2c0-1.33 2.67-4 8-4z"/></svg>
+      </div>
+      <div>
+        <div class="logo-title">AI Health Guardian</div>
+        <div class="logo-sub">health.ai v2.0</div>
+      </div>
+    </div>
+    <div class="ai-status"><span class="pulse"></span><span>AI online</span></div>
+  </div>
+
+  <nav>
+    <div class="nav-group">
+      <span class="nav-label">Monitor</span>
+      <button class="nav-btn active" onclick="go('dashboard',this)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/></svg>
+        Dashboard
+      </button>
+      <button class="nav-btn" id="alerts-btn" onclick="go('alerts',this)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+        Alerts
+        <span class="nav-badge" id="alert-badge">2</span>
+      </button>
+    </div>
+    <div class="nav-group">
+      <span class="nav-label">AI Tools</span>
+      <button class="nav-btn" onclick="go('symptoms',this)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg>
+        Symptom Checker
+      </button>
+      <button class="nav-btn" onclick="go('scanner',this)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9V6a1 1 0 0 1 1-1h3M3 15v3a1 1 0 0 0 1 1h3M15 5h3a1 1 0 0 1 1 1v3M15 19h3a1 1 0 0 0 1-1v-3"/><rect x="7" y="7" width="10" height="10" rx="1"/></svg>
+        Med Scanner
+      </button>
+      <button class="nav-btn" onclick="go('chat',this)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+        AI Assistant
+      </button>
+    </div>
+  </nav>
+
+  <div class="sidebar-foot">
+    <div class="patient-card">
+      <div class="patient-avatar">P</div>
+      <div>
+        <div class="patient-name">Patient</div>
+        <div class="patient-id">#AHG-2026-001</div>
+      </div>
+    </div>
+  </div>
+</aside>
+
+<main class="main">
+
+  <!-- DASHBOARD -->
+  <div class="page active" id="page-dashboard">
+    <div class="page-head">
+      <h1>Health Dashboard</h1>
+      <p>Live vitals — updates every 2 seconds</p>
+    </div>
+    <div class="metrics-row">
+      <div class="metric-card ok" id="mc-hr">
+        <div class="metric-label">Heart Rate</div>
+        <div class="metric-value" id="v-hr">78 <span class="metric-unit">bpm</span></div>
+        <div class="metric-status ok" id="s-hr">Normal</div>
+      </div>
+      <div class="metric-card ok" id="mc-bp">
+        <div class="metric-label">Blood Pressure</div>
+        <div class="metric-value">118 <span class="metric-unit">/76</span></div>
+        <div class="metric-status ok">Optimal</div>
+      </div>
+      <div class="metric-card ok" id="mc-spo2">
+        <div class="metric-label">SpO2</div>
+        <div class="metric-value" id="v-spo2">98 <span class="metric-unit">%</span></div>
+        <div class="metric-status ok" id="s-spo2">Excellent</div>
+      </div>
+      <div class="metric-card ok">
+        <div class="metric-label">Temperature</div>
+        <div class="metric-value">36.8 <span class="metric-unit">°C</span></div>
+        <div class="metric-status ok">Normal</div>
+      </div>
+    </div>
+    <div class="grid2">
+      <div class="card">
+        <div class="card-head"><span class="card-title">Heart Rate</span><span class="pill pill-green">LIVE</span></div>
+        <div class="chart-box"><canvas id="c-hr"></canvas></div>
+      </div>
+      <div class="card">
+        <div class="card-head"><span class="card-title">SpO2</span><span class="pill pill-blue">LIVE</span></div>
+        <div class="chart-box"><canvas id="c-spo2"></canvas></div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-head"><span class="card-title">Daily Steps This Week</span><span class="pill pill-green">7 DAYS</span></div>
+      <div class="chart-box" style="height:80px"><canvas id="c-steps"></canvas></div>
+    </div>
+  </div>
+
+  <!-- ALERTS -->
+  <div class="page" id="page-alerts">
+    <div class="page-head"><h1>Alerts</h1><p>Health alerts and notifications</p></div>
+    <div class="card">
+      <div class="card-head"><span class="card-title">Recent alerts</span><span class="pill pill-red">3 TOTAL</span></div>
+      <div class="alert-row">
+        <span class="alert-dot" style="background:var(--red)"></span>
+        <div style="flex:1">
+          <div class="alert-title">Elevated heart rate detected</div>
+          <div class="alert-desc">HR reached 112 bpm at 2:34 PM. Possible stress or exertion. Family notified via SMS.</div>
+        </div>
+        <span class="pill pill-red">HIGH</span>
+      </div>
+      <div class="alert-row">
+        <span class="alert-dot" style="background:var(--amber)"></span>
+        <div style="flex:1">
+          <div class="alert-title">Medication reminder</div>
+          <div class="alert-desc">Metformin 500mg due at 8:00 PM with dinner.</div>
+        </div>
+        <span class="pill pill-amber">MED</span>
+      </div>
+      <div class="alert-row">
+        <span class="alert-dot" style="background:var(--green)"></span>
+        <div style="flex:1">
+          <div class="alert-title">Daily step goal achieved</div>
+          <div class="alert-desc">8,200 steps completed today. Great work!</div>
+        </div>
+        <span class="pill pill-green">INFO</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- SYMPTOM CHECKER -->
+  <div class="page" id="page-symptoms">
+    <div class="page-head"><h1>Symptom Checker</h1><p>Select your symptoms — AI will assess and advise</p></div>
+    <div class="card">
+      <div class="symptom-grid">
+        <span class="sym-tag" onclick="this.classList.toggle('on')">Headache</span>
+        <span class="sym-tag" onclick="this.classList.toggle('on')">Fever</span>
+        <span class="sym-tag" onclick="this.classList.toggle('on')">Chest pain</span>
+        <span class="sym-tag" onclick="this.classList.toggle('on')">Shortness of breath</span>
+        <span class="sym-tag" onclick="this.classList.toggle('on')">Fatigue</span>
+        <span class="sym-tag" onclick="this.classList.toggle('on')">Nausea</span>
+        <span class="sym-tag" onclick="this.classList.toggle('on')">Dizziness</span>
+        <span class="sym-tag" onclick="this.classList.toggle('on')">Cough</span>
+        <span class="sym-tag" onclick="this.classList.toggle('on')">Sore throat</span>
+        <span class="sym-tag" onclick="this.classList.toggle('on')">Back pain</span>
+        <span class="sym-tag" onclick="this.classList.toggle('on')">Joint pain</span>
+        <span class="sym-tag" onclick="this.classList.toggle('on')">Rash</span>
+        <span class="sym-tag" onclick="this.classList.toggle('on')">Stomach ache</span>
+        <span class="sym-tag" onclick="this.classList.toggle('on')">Vomiting</span>
+        <span class="sym-tag" onclick="this.classList.toggle('on')">Vision changes</span>
+      </div>
+      <button class="btn btn-green" onclick="checkSymptoms()" id="sym-btn">Analyse with AI</button>
+      <div class="error-box" id="sym-error"></div>
+      <div class="result-box" id="sym-result"></div>
+      <div id="sev-wrap" style="display:none;margin-top:10px">
+        <div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px">Severity level</div>
+        <div class="sev-bar"><div class="sev-fill" id="sev-fill"></div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MED SCANNER -->
+  <div class="page" id="page-scanner">
+    <div class="page-head"><h1>Medicine Scanner</h1><p>Upload any medicine photo for AI identification</p></div>
+    <div class="card">
+      <label class="drop-zone">
+        <input type="file" accept="image/*" id="med-file" onchange="scanMedicine(event)">
+        <div class="drop-icon">
+          <svg fill="none" viewBox="0 0 24 24" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5m-13.5-9L12 3m0 0 4.5 4.5M12 3v13.5"/></svg>
+        </div>
+        <div class="drop-title">Click to upload medicine image</div>
+        <div class="drop-sub">Tablets · Capsules · Bottles · Blister packs · Boxes</div>
+      </label>
+      <img id="med-img" class="med-preview" alt="Medicine">
+      <div class="error-box" id="scan-error"></div>
+      <div class="med-result" id="med-result">
+        <div id="med-loading" style="font-size:13px;color:var(--text3);display:none;padding:8px 0"><span class="spin"></span>Analysing with AI vision...</div>
+        <div id="med-output" style="display:none">
+          <div class="med-name-row">
+            <div class="med-name" id="med-name"></div>
+            <span class="pill pill-green">IDENTIFIED</span>
+          </div>
+          <div class="info-grid">
+            <div class="info-tile"><div class="info-tile-label">Category</div><div class="info-tile-val" id="med-cat"></div></div>
+            <div class="info-tile"><div class="info-tile-label">Common use</div><div class="info-tile-val" id="med-use"></div></div>
+            <div class="info-tile"><div class="info-tile-label">Typical dose</div><div class="info-tile-val" id="med-dose"></div></div>
+            <div class="info-tile"><div class="info-tile-label">Key warnings</div><div class="info-tile-val" id="med-warn"></div></div>
+          </div>
+          <div class="disclaimer">AI identification only — always consult a pharmacist or doctor before taking any medication.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- AI CHAT -->
+  <div class="page" id="page-chat">
+    <div class="page-head">
+      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
+        <div><h1>AI Health Assistant</h1><p>Powered by Claude — ask anything about your health</p></div>
+        <div class="ai-status"><span class="pulse"></span><span>Claude online</span></div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="chat-wrap">
+        <div class="chat-msgs" id="chat-msgs">
+          <div class="bubble bot">Hello! I'm your AI Health Guardian. I can help with health questions, explain your vitals, analyse symptoms, or provide medication guidance. What can I help you with?</div>
+        </div>
+        <div class="error-box" id="chat-error"></div>
+        <div class="chat-bar">
+          <input type="text" id="chat-in" placeholder="Ask a health question..." onkeydown="if(event.key==='Enter')sendChat()">
+          <button class="btn btn-green" onclick="sendChat()">Send</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</main>
+
+<script>
+// ── Navigation ───────────────────────────────────────────────────────────
+function go(name, btn) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('page-' + name).classList.add('active');
+  if (btn) btn.classList.add('active');
+  // Clear alert badge when alerts page is opened
+  if (name === 'alerts') {
+    const badge = document.getElementById('alert-badge');
+    if (badge) badge.remove();
+  }
+}
+
+// ── API call — goes through Flask proxy ─────────────────────────────────
+async function callAI(payload) {
+  const res = await fetch('/api/ai', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  });
+  if (!res.ok) throw new Error('Server error ' + res.status);
+  const data = await res.json();
+  if (data.error) throw new Error(data.error);
+  return data.content[0].text;
+}
+
+// ── Charts ───────────────────────────────────────────────────────────────
+const hrVals  = Array.from({length:20}, () => 70 + Math.round(Math.random()*12));
+const spo2Vals = Array.from({length:20}, () => 96 + Math.round(Math.random()*3));
+
+const chartOpts = (yMin, yMax) => ({
+  responsive: true,
+  maintainAspectRatio: false,
+  animation: false,
+  plugins: { legend: { display: false }, tooltip: { enabled: false } },
+  scales: {
+    x: { display: false },
+    y: { display: false, min: yMin, max: yMax }  // FIXED Y RANGE — no more growing
+  }
+});
+
+let hrChart, spo2Chart;
+
+window.addEventListener('load', () => {
+  const hrCtx   = document.getElementById('c-hr').getContext('2d');
+  const spo2Ctx = document.getElementById('c-spo2').getContext('2d');
+  const stepsCtx = document.getElementById('c-steps').getContext('2d');
+
+  hrChart = new Chart(hrCtx, {
+    type: 'line',
+    data: {
+      labels: hrVals.map((_,i) => i),
+      datasets: [{ data: [...hrVals], borderColor: '#00d4a0', borderWidth: 2,
+        fill: true, backgroundColor: 'rgba(0,212,160,0.08)', pointRadius: 0, tension: 0.4 }]
+    },
+    options: chartOpts(40, 140)
+  });
+
+  spo2Chart = new Chart(spo2Ctx, {
+    type: 'line',
+    data: {
+      labels: spo2Vals.map((_,i) => i),
+      datasets: [{ data: [...spo2Vals], borderColor: '#4f9eff', borderWidth: 2,
+        fill: true, backgroundColor: 'rgba(79,158,255,0.08)', pointRadius: 0, tension: 0.4 }]
+    },
+    options: chartOpts(85, 100)
+  });
+
+  new Chart(stepsCtx, {
+    type: 'bar',
+    data: {
+      labels: ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'],
+      datasets: [{ data: [6200,7800,5400,9100,8200,11000,4300],
+        backgroundColor: 'rgba(0,212,160,0.15)', borderColor: '#00d4a0',
+        borderWidth: 1.5, borderRadius: 4 }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false, animation: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { color: '#4a5168', font: { size: 10 } } },
+        y: { display: false, min: 0, max: 14000 }
+      }
+    }
+  });
+});
+
+// Live vitals tick
+setInterval(() => {
+  const hr = 65 + Math.round(Math.random()*25);
+  hrVals.push(hr); hrVals.shift();
+  document.getElementById('v-hr').innerHTML = hr + ' <span class="metric-unit">bpm</span>';
+  const hrOk = hr >= 55 && hr <= 100;
+  document.getElementById('s-hr').textContent = hr > 100 ? 'Elevated' : hr < 55 ? 'Low' : 'Normal';
+  document.getElementById('s-hr').className = 'metric-status ' + (hrOk ? 'ok' : 'warn');
+  document.getElementById('mc-hr').className = 'metric-card ' + (hrOk ? 'ok' : 'warn');
+  if (hrChart) { hrChart.data.datasets[0].data = [...hrVals]; hrChart.update('none'); }
+
+  const sp = 95 + Math.round(Math.random()*4);
+  spo2Vals.push(sp); spo2Vals.shift();
+  document.getElementById('v-spo2').innerHTML = sp + ' <span class="metric-unit">%</span>';
+  if (spo2Chart) { spo2Chart.data.datasets[0].data = [...spo2Vals]; spo2Chart.update('none'); }
+}, 2000);
+
+// ── Symptom Checker ──────────────────────────────────────────────────────
+async function checkSymptoms() {
+  const selected = [...document.querySelectorAll('.sym-tag.on')].map(t => t.textContent.trim());
+  if (!selected.length) { alert('Please select at least one symptom.'); return; }
+  const btn = document.getElementById('sym-btn');
+  const res = document.getElementById('sym-result');
+  const err = document.getElementById('sym-error');
+  const sevWrap = document.getElementById('sev-wrap');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spin"></span>Analysing...';
+  res.style.display = 'block';
+  res.innerHTML = '<span class="spin"></span>Thinking...';
+  err.style.display = 'none';
+  sevWrap.style.display = 'none';
+  try {
+    const text = await callAI({
+      model: 'claude-sonnet-4-20250514', max_tokens: 400,
+      system: 'You are a health AI assistant. Given symptoms, give a brief clear empathetic 3-4 sentence assessment: possible causes, severity, and one action to take. End your response with exactly this on a new line: SEVERITY:N where N is a number 1 to 10.',
+      messages: [{ role: 'user', content: 'Symptoms: ' + selected.join(', ') }]
+    });
+    const sevMatch = text.match(/SEVERITY:(\d+)/);
+    const sev = sevMatch ? parseInt(sevMatch[1]) : 4;
+    res.innerHTML = text.replace(/SEVERITY:\d+/g, '').trim().replace(/\n/g, '<br>');
+    const col = sev < 4 ? '#00d4a0' : sev < 7 ? '#f0a500' : '#ff4f6a';
+    document.getElementById('sev-fill').style.width = Math.min(sev * 10, 100) + '%';
+    document.getElementById('sev-fill').style.background = col;
+    sevWrap.style.display = 'block';
+  } catch(e) {
+    res.style.display = 'none';
+    err.textContent = 'Could not connect to AI. Make sure Flask is running (python app.py) and open this page at http://localhost:5000';
+    err.style.display = 'block';
+  }
+  btn.disabled = false;
+  btn.innerHTML = 'Analyse with AI';
+}
+
+// ── Medicine Scanner ─────────────────────────────────────────────────────
+async function scanMedicine(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  const img = document.getElementById('med-img');
+  const err = document.getElementById('scan-error');
+  err.style.display = 'none';
+  const reader = new FileReader();
+  reader.onload = async (ev) => {
+    img.src = ev.target.result;
+    img.style.display = 'block';
+    const base64 = ev.target.result.split(',')[1];
+    const mime = file.type || 'image/jpeg';
+    document.getElementById('med-result').style.display = 'block';
+    document.getElementById('med-loading').style.display = 'block';
+    document.getElementById('med-output').style.display = 'none';
+    try {
+      const text = await callAI({
+        model: 'claude-sonnet-4-20250514', max_tokens: 500,
+        system: 'You are a pharmaceutical AI. Carefully examine the medicine image — read all visible text, note the shape, color, and packaging. Identify the medicine as specifically as possible. You MUST respond with only a valid JSON object — no markdown, no explanation, no code fences. Use exactly these keys: name, category, use, dose, warning.',
+        messages: [{
+          role: 'user',
+          content: [
+            { type: 'image', source: { type: 'base64', media_type: mime, data: base64 } },
+            { type: 'text', text: 'Identify this medicine. Respond only with JSON containing: name, category, use, dose, warning.' }
+          ]
+        }]
+      });
+      let info;
+      try {
+        const clean = text.replace(/```json|```/g, '').trim();
+        info = JSON.parse(clean);
+      } catch {
+        info = { name: 'Could not parse', category: '—', use: '—', dose: 'Consult pharmacist', warning: 'Always read the label' };
+      }
+      document.getElementById('med-name').textContent = info.name || 'Unknown';
+      document.getElementById('med-cat').textContent  = info.category || '—';
+      document.getElementById('med-use').textContent  = info.use || '—';
+      document.getElementById('med-dose').textContent = info.dose || '—';
+      document.getElementById('med-warn').textContent = info.warning || '—';
+      document.getElementById('med-loading').style.display = 'none';
+      document.getElementById('med-output').style.display = 'block';
+    } catch(e) {
+      document.getElementById('med-loading').style.display = 'none';
+      err.textContent = 'Could not connect to AI. Make sure Flask is running (python app.py) and open this page at http://localhost:5000';
+      err.style.display = 'block';
+    }
+  };
+  reader.readAsDataURL(file);
+}
+
+// ── AI Chat ───────────────────────────────────────────────────────────────
+const history = [];
+
+async function sendChat() {
+  const input = document.getElementById('chat-in');
+  const msg = input.value.trim();
+  if (!msg) return;
+  input.value = '';
+  const msgs = document.getElementById('chat-msgs');
+  const err = document.getElementById('chat-error');
+  err.style.display = 'none';
+  msgs.innerHTML += `<div class="bubble user">${msg}</div>`;
+  const typingId = 'typing-' + Date.now();
+  msgs.innerHTML += `<div class="bubble bot loading" id="${typingId}"><span class="spin"></span>Thinking...</div>`;
+  msgs.scrollTop = msgs.scrollHeight;
+  history.push({ role: 'user', content: msg });
+  try {
+    const reply = await callAI({
+      model: 'claude-sonnet-4-20250514', max_tokens: 350,
+      system: 'You are the AI Health Guardian assistant — knowledgeable, empathetic, and concise. Provide helpful health guidance in under 100 words. Always recommend seeing a doctor for serious concerns.',
+      messages: [...history]
+    });
+    history.push({ role: 'assistant', content: reply });
+    document.getElementById(typingId)?.remove();
+    msgs.innerHTML += `<div class="bubble bot">${reply.replace(/\n/g,'<br>')}</div>`;
+  } catch(e) {
+    document.getElementById(typingId)?.remove();
+    err.textContent = 'Could not connect to AI. Make sure Flask is running (python app.py) and open this page at http://localhost:5000';
+    err.style.display = 'block';
+  }
+  msgs.scrollTop = msgs.scrollHeight;
+}
+</script>
+</body>
+</html>
